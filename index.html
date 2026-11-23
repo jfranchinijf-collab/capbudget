@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cap Budget</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1e3a8a">
+<link rel="icon" href="icone-192.png">
+<link rel="apple-touch-icon" href="icone-192.png">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root { --bleu:#1e3a8a; --cyan:#06b6d4; --soleil:#fbbf24; --fond:#f8fafc; --texte:#0f172a; --gris:#64748b; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--fond); color:var(--texte); }
+  .ecran:not(.actif) { display:none !important; }
+  body:not(.mode-perso) .perso-seul { display:none !important; }
+  #accueil { min-height:100vh; background:linear-gradient(135deg,var(--bleu) 0%,#4338ca 45%,var(--cyan) 100%); color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px 20px; position:relative; }
+  #accueil .langue { position:absolute; top:16px; right:16px; }
+  .logo { width:96px; height:96px; margin-bottom:12px; }
+  #accueil h1 { font-size:52px; margin:0; letter-spacing:-1px; }
+  #accueil p.accroche { font-size:20px; opacity:.92; max-width:560px; margin:14px auto 32px; }
+  .btn { border:0; border-radius:14px; padding:16px 28px; font-size:18px; font-weight:600; cursor:pointer; margin:8px; }
+  .btn-primaire { background:var(--soleil); color:var(--texte); }
+  .btn-second { background:rgba(255,255,255,.15); color:#fff; border:2px solid rgba(255,255,255,.6); }
+  .btn-petit { padding:8px 14px; font-size:14px; border-radius:10px; }
+  .atouts { display:flex; gap:20px; flex-wrap:wrap; justify-content:center; margin-top:40px; }
+  .atout { background:rgba(255,255,255,.12); border-radius:16px; padding:18px 22px; width:220px; }
+  .atout b { display:block; font-size:18px; margin-bottom:6px; }
+  header { background:var(--bleu); color:#fff; padding:14px 20px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  header h2 { margin:0; font-size:22px; display:flex; align-items:center; gap:8px; } header h2 img { width:32px; height:32px; } header .espace { flex:1; }
+  main { max-width:1100px; margin:0 auto; padding:20px; }
+  .cartes { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin-bottom:20px; }
+  .carte { background:#fff; border-radius:16px; padding:18px; box-shadow:0 4px 14px rgba(15,23,42,.06); }
+  .carte .libelle { color:var(--gris); font-size:14px; } .carte .valeur { font-size:28px; font-weight:700; margin-top:4px; }
+  .revenu { color:#059669; } .depense { color:#e11d48; }
+  .grille { display:grid; grid-template-columns:1fr 1fr; gap:16px; } @media (max-width:800px){ .grille { grid-template-columns:1fr; } }
+  select, input[type=text], input[type=number] { padding:8px 10px; border-radius:10px; border:1px solid #cbd5e1; font-size:15px; }
+  input[type=number] { width:110px; }
+  .bascule { display:inline-flex; background:#e2e8f0; border-radius:10px; overflow:hidden; }
+  .bascule button { border:0; padding:8px 14px; background:transparent; cursor:pointer; font-weight:600; color:var(--gris); }
+  .bascule button.on { background:var(--bleu); color:#fff; }
+  .modal { position:fixed; inset:0; background:rgba(15,23,42,.6); display:none; align-items:center; justify-content:center; padding:20px; z-index:10; }
+  .modal.actif { display:flex; } .modal .carte { max-width:560px; width:100%; max-height:90vh; overflow:auto; }
+  .tag { display:inline-block; background:#e0f2fe; color:var(--bleu); border-radius:999px; padding:2px 10px; font-size:12px; margin:2px; }
+  .ligne-budget { padding:10px 0; border-bottom:1px solid #e2e8f0; }
+  .ligne-budget .haut { display:flex; justify-content:space-between; gap:8px; font-size:14px; }
+  .barre { height:10px; border-radius:6px; background:#e2e8f0; overflow:hidden; margin:6px 0 2px; } .barre div { height:10px; border-radius:6px; }
+  .petit { font-size:12px; color:var(--gris); margin:0; }
+  .choix-profil { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px; }
+  .choix-profil button { border:2px solid #e2e8f0; background:#fff; border-radius:14px; padding:18px 12px; cursor:pointer; text-align:left; font-size:16px; }
+  .choix-profil button:hover { border-color:var(--cyan); }
+  .ligne-verif { display:grid; grid-template-columns:auto minmax(0,1fr) 120px; gap:6px 8px; align-items:center; padding:10px 0; border-bottom:1px solid #e2e8f0; }
+  .ligne-verif input[type=checkbox] { width:22px; height:22px; }
+  .ligne-verif input[type=date] { padding:7px 6px; border-radius:10px; border:1px solid #cbd5e1; font-size:14px; min-width:0; width:100%; }
+  .ligne-verif input[type=number] { width:100%; text-align:right; font-weight:600; }
+  .ligne-verif input[type=text] { grid-column:2 / 4; width:100%; }
+  .choix-profil b { display:block; margin-bottom:4px; color:var(--bleu); } .choix-profil span { font-size:13px; color:var(--gris); }
+</style>
+</head>
+<body>
+
+<section id="accueil" class="ecran actif">
+  <select class="langue" onchange="setLangue(this.value)" aria-label="Langue"></select>
+  <img class="logo" src="icone-192.png" alt="Logo Cap Budget">
+  <h1>Cap Budget</h1>
+  <p class="accroche" data-t="accroche"></p>
+  <div>
+    <button class="btn btn-primaire" onclick="lancer('import')" data-t="importer"></button>
+    <button class="btn btn-second" onclick="lancer('demo')" data-t="demo"></button>
+  </div>
+  <div class="atouts">
+    <div class="atout"><b data-t="a1t"></b><span data-t="a1"></span></div>
+    <div class="atout"><b data-t="a2t"></b><span data-t="a2"></span></div>
+    <div class="atout"><b data-t="a3t"></b><span data-t="a3"></span></div>
+    <div class="atout"><b data-t="a4t"></b><span data-t="a4"></span></div>
+  </div>
+</section>
+
+<section id="app" class="ecran">
+  <header>
+    <h2><img src="icone-192.png" alt=""> Cap Budget</h2>
+    <select id="selProfil" onchange="setProfil(this.value)" aria-label="Profil"></select>
+    <select id="selMois" onchange="afficher()" aria-label="Mois"></select>
+    <div class="bascule"><button id="bCam" class="on" onclick="setVue('camembert')" data-t="camemberts"></button><button id="bBar" onclick="setVue('barres')" data-t="barres"></button></div>
+    <div class="espace"></div>
+    <select class="langue" onchange="setLangue(this.value)" aria-label="Langue"></select>
+    <label class="btn btn-primaire btn-petit" style="position:relative"><span data-t="importerCsv"></span><input id="fichier" type="file" multiple accept=".csv,.txt,text/csv,text/plain,text/comma-separated-values,application/csv,application/vnd.ms-excel,.pdf,application/pdf,image/*" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" onchange="importerFichiers(this.files)"></label>
+    <button class="btn btn-second btn-petit perso-seul" onclick="ouvrirBudgets()" data-t="budgets"></button>
+    <button class="btn btn-second btn-petit" onclick="ouvrirReglages()" data-t="categories"></button>
+    <button class="btn btn-second btn-petit" onclick="toutEffacer()" data-t="effacer"></button>
+  </header>
+  <main>
+    <div class="cartes">
+      <div class="carte"><div class="libelle" data-t="kRev"></div><div class="valeur revenu" id="kRev">–</div></div>
+      <div class="carte"><div class="libelle" data-t="kDep"></div><div class="valeur depense" id="kDep">–</div></div>
+      <div class="carte"><div class="libelle" data-t="kRes"></div><div class="valeur" id="kRes">–</div></div>
+      <div class="carte"><div class="libelle" data-t="kNb"></div><div class="valeur" id="kNb">–</div></div>
+    </div>
+    <div class="grille perso-seul" style="margin-bottom:16px">
+      <div class="carte"><h3 data-t="suivi"></h3><div id="listeSuivi"></div></div>
+      <div class="carte"><h3 data-t="epargne"></h3><div id="listeEpargne"></div></div>
+    </div>
+    <div class="grille">
+      <div class="carte"><h3 data-t="gDep"></h3><canvas id="gDep"></canvas></div>
+      <div class="carte"><h3 data-t="gRev"></h3><canvas id="gRev"></canvas></div>
+    </div>
+    <div class="carte" style="margin-top:16px"><h3 data-t="gAnnee"></h3><canvas id="gAnnee" height="110"></canvas></div>
+  </main>
+</section>
+
+<!-- Choix du profil au premier lancement -->
+<div id="mProfil" class="modal"><div class="carte">
+  <h3 data-t="choixTitre"></h3>
+  <p class="petit" data-t="choixAide"></p>
+  <div class="choix-profil">
+    <button onclick="choisirProfil('pro')"><b data-t="pro"></b><span data-t="proD"></span></button>
+    <button onclick="choisirProfil('perso')"><b data-t="perso"></b><span data-t="persoD"></span></button>
+  </div>
+</div></div>
+
+<!-- Budgets et épargne (mode particulier) -->
+<div id="mBudgets" class="modal"><div class="carte">
+  <h3 data-t="budgets"></h3>
+  <p class="petit" data-t="aideBudg"></p>
+  <div id="listePlafonds" style="max-height:35vh;overflow:auto"></div>
+  <h3 data-t="epargne"></h3>
+  <div id="listeObjectifs"></div>
+  <p><input type="text" id="objNom"> <input type="number" id="objCible" min="0" step="50"> <button class="btn btn-primaire btn-petit" onclick="ajouterObjectif()" data-t="ajouter"></button></p>
+  <p><button class="btn btn-petit" style="background:var(--bleu);color:#fff" onclick="fermerBudgets()" data-t="fermer"></button></p>
+</div></div>
+
+<!-- Lecture d'un PDF ou d'une photo en cours -->
+<div id="mAttente" class="modal"><div class="carte" style="text-align:center">
+  <p id="txtAttente" style="font-weight:600"></p>
+  <p class="petit" data-t="lectureAide"></p>
+</div></div>
+
+<!-- Vérification des opérations lues dans un PDF ou une photo -->
+<div id="mVerif" class="modal"><div class="carte" style="max-width:820px">
+  <h3 data-t="verifTitre"></h3>
+  <p class="petit" data-t="verifAide"></p>
+  <div style="max-height:55vh;overflow:auto;margin:12px 0">
+    <div id="listeVerif"></div>
+  </div>
+  <p><button class="btn btn-primaire btn-petit" onclick="validerVerif()" data-t="importerSel"></button>
+  <button class="btn btn-petit" style="background:#e2e8f0;color:var(--texte)" onclick="document.getElementById('mVerif').classList.remove('actif')" data-t="annuler"></button></p>
+</div></div>
+
+<!-- Catégories -->
+<div id="mReglages" class="modal"><div class="carte">
+  <h3 data-t="titreCat"></h3>
+  <p style="color:var(--gris)" data-t="aideCat"></p>
+  <div id="listeCat" style="max-height:50vh;overflow:auto"></div>
+  <p><input type="text" id="nvNom"> <select id="nvType"></select> <button class="btn btn-primaire btn-petit" onclick="ajouterCat()" data-t="ajouter"></button></p>
+  <p><button class="btn btn-primaire btn-petit" onclick="fusionner()" data-t="fusionner"></button>
+  <button class="btn btn-petit" style="background:var(--bleu);color:#fff" onclick="fermer()" data-t="fermer"></button></p>
+</div></div>
+
+<!-- Messages de l'appli (remplacent les fenêtres du navigateur, parfois bloquées) -->
+<div id="mMessage" class="modal" style="z-index:20"><div class="carte" style="max-width:440px">
+  <p id="txtMessage" style="font-size:16px;line-height:1.5"></p>
+  <p id="zoneSaisie"></p>
+  <p><button id="bOk" class="btn btn-primaire btn-petit">OK</button> <button id="bAnnuler" class="btn btn-petit" style="background:#e2e8f0;color:var(--texte)"></button></p>
+</div></div>
+
+<script>
+// ---------- Traductions ----------
+const T = {
+ fr:{nom:'Français', accroche:'Votre budget, clair et net. Importez votre relevé bancaire, Cap Budget classe tout et vous montre où va votre argent, mois par mois.', importer:'Importer mon relevé', demo:'Essayer avec la démo', a1t:'📂 Import en 10 secondes', a1:'Un CSV, un PDF ou une capture d’écran de votre banque, et c’est classé.', a2t:'📊 Graphiques clairs', a2:'Diagrammes et barres, poste par poste.', a3t:'🔒 Rien ne sort d’ici', a3:'Vos données restent sur votre appareil.', a4t:'✨ Catégories automatiques', a4:'Créées à partir de vos relevés.', camemberts:'Diagrammes', barres:'Barres', importerCsv:'Importer un relevé', categories:'Catégories', effacer:'Tout effacer', kRev:'Revenus du mois', kDep:'Dépenses du mois', kRes:'Résultat', kNb:'Opérations', gDep:'Dépenses par poste', gRev:'Revenus par source', gAnnee:'Année : revenus contre dépenses', titreCat:'Vos catégories', aideCat:'Créées automatiquement à partir de vos relevés. Renommez-les, cochez-en plusieurs pour les fusionner, ou ajoutez les vôtres.', ajouter:'Ajouter', fusionner:'Fusionner la sélection', fermer:'Fermer', nouvelle:'Nouvelle catégorie', depense:'Dépense', revenu:'Revenu', revenus:'Revenus', depenses:'Dépenses', confirmer:'Supprimer toutes les données ?', importees:'opérations importées', nomFusion:'Nom de la catégorie fusionnée :', choisir2:'Cochez au moins deux catégories du même type.'},
+ en:{nom:'English', accroche:'Your budget, clear and simple. Import your bank statement, Cap Budget sorts everything and shows where your money goes, month by month.', importer:'Import my statement', demo:'Try the demo', a1t:'📂 Import in 10 seconds', a1:'A CSV, a PDF or a screenshot from your bank, and it’s sorted.', a2t:'📊 Clear charts', a2:'Pie and bar charts, item by item.', a3t:'🔒 Nothing leaves here', a3:'Your data stays on your device.', a4t:'✨ Automatic categories', a4:'Built from your statements.', camemberts:'Charts', barres:'Bars', importerCsv:'Import a statement', categories:'Categories', effacer:'Clear all', kRev:'Income this month', kDep:'Expenses this month', kRes:'Result', kNb:'Transactions', gDep:'Expenses by item', gRev:'Income by source', gAnnee:'Year: income vs expenses', titreCat:'Your categories', aideCat:'Created automatically from your statements. Rename them, tick several to merge them, or add your own.', ajouter:'Add', fusionner:'Merge selection', fermer:'Close', nouvelle:'New category', depense:'Expense', revenu:'Income', revenus:'Income', depenses:'Expenses', confirmer:'Delete all data?', importees:'transactions imported', nomFusion:'Name of the merged category:', choisir2:'Tick at least two categories of the same type.'},
+ es:{nom:'Español', accroche:'Tu presupuesto, claro y sencillo. Importa tu extracto bancario, Cap Budget lo clasifica todo y te muestra adónde va tu dinero, mes a mes.', importer:'Importar mi extracto', demo:'Probar la demo', a1t:'📂 Importa en 10 segundos', a1:'Un CSV, un PDF o una captura de tu banco, y listo.', a2t:'📊 Gráficos claros', a2:'Diagramas y barras, partida por partida.', a3t:'🔒 Nada sale de aquí', a3:'Tus datos se quedan en tu dispositivo.', a4t:'✨ Categorías automáticas', a4:'Creadas a partir de tus extractos.', camemberts:'Diagramas', barres:'Barras', importerCsv:'Importar un extracto', categories:'Categorías', effacer:'Borrar todo', kRev:'Ingresos del mes', kDep:'Gastos del mes', kRes:'Resultado', kNb:'Operaciones', gDep:'Gastos por partida', gRev:'Ingresos por fuente', gAnnee:'Año: ingresos frente a gastos', titreCat:'Tus categorías', aideCat:'Creadas automáticamente a partir de tus extractos. Renómbralas, marca varias para fusionarlas o añade las tuyas.', ajouter:'Añadir', fusionner:'Fusionar selección', fermer:'Cerrar', nouvelle:'Nueva categoría', depense:'Gasto', revenu:'Ingreso', revenus:'Ingresos', depenses:'Gastos', confirmer:'¿Borrar todos los datos?', importees:'operaciones importadas', nomFusion:'Nombre de la categoría fusionada:', choisir2:'Marca al menos dos categorías del mismo tipo.'},
+ it:{nom:'Italiano', accroche:'Il tuo budget, chiaro e semplice. Importa l’estratto conto, Cap Budget classifica tutto e ti mostra dove vanno i tuoi soldi, mese per mese.', importer:'Importa il mio estratto', demo:'Prova la demo', a1t:'📂 Importa in 10 secondi', a1:'Un CSV, un PDF o uno screenshot della tua banca, ed è tutto classificato.', a2t:'📊 Grafici chiari', a2:'Diagrammi e barre, voce per voce.', a3t:'🔒 Niente esce da qui', a3:'I tuoi dati restano sul tuo dispositivo.', a4t:'✨ Categorie automatiche', a4:'Create dai tuoi estratti conto.', camemberts:'Diagrammi', barres:'Barre', importerCsv:'Importa un estratto', categories:'Categorie', effacer:'Cancella tutto', kRev:'Entrate del mese', kDep:'Uscite del mese', kRes:'Risultato', kNb:'Operazioni', gDep:'Uscite per voce', gRev:'Entrate per fonte', gAnnee:'Anno: entrate contro uscite', titreCat:'Le tue categorie', aideCat:'Create automaticamente dai tuoi estratti. Rinominale, selezionane più di una per unirle, o aggiungi le tue.', ajouter:'Aggiungi', fusionner:'Unisci selezione', fermer:'Chiudi', nouvelle:'Nuova categoria', depense:'Uscita', revenu:'Entrata', revenus:'Entrate', depenses:'Uscite', confirmer:'Cancellare tutti i dati?', importees:'operazioni importate', nomFusion:'Nome della categoria unita:', choisir2:'Seleziona almeno due categorie dello stesso tipo.'},
+ de:{nom:'Deutsch', accroche:'Ihr Budget, klar und einfach. Importieren Sie Ihren Kontoauszug, Cap Budget sortiert alles und zeigt Ihnen Monat für Monat, wohin Ihr Geld fließt.', importer:'Kontoauszug importieren', demo:'Demo ausprobieren', a1t:'📂 Import in 10 Sekunden', a1:'Eine CSV-Datei, ein PDF oder ein Screenshot Ihrer Bank, und alles ist sortiert.', a2t:'📊 Klare Diagramme', a2:'Diagramme und Balken pro Posten.', a3t:'🔒 Nichts verlässt Ihr Gerät', a3:'Ihre Daten bleiben bei Ihnen.', a4t:'✨ Automatische Kategorien', a4:'Aus Ihren Kontoauszügen erstellt.', camemberts:'Diagramme', barres:'Balken', importerCsv:'Auszug importieren', categories:'Kategorien', effacer:'Alles löschen', kRev:'Einnahmen im Monat', kDep:'Ausgaben im Monat', kRes:'Ergebnis', kNb:'Buchungen', gDep:'Ausgaben nach Posten', gRev:'Einnahmen nach Quelle', gAnnee:'Jahr: Einnahmen und Ausgaben', titreCat:'Ihre Kategorien', aideCat:'Automatisch aus Ihren Auszügen erstellt. Umbenennen, mehrere ankreuzen zum Zusammenführen, oder eigene hinzufügen.', ajouter:'Hinzufügen', fusionner:'Auswahl zusammenführen', fermer:'Schließen', nouvelle:'Neue Kategorie', depense:'Ausgabe', revenu:'Einnahme', revenus:'Einnahmen', depenses:'Ausgaben', confirmer:'Alle Daten löschen?', importees:'Buchungen importiert', nomFusion:'Name der zusammengeführten Kategorie:', choisir2:'Kreuzen Sie mindestens zwei Kategorien desselben Typs an.'},
+ pt:{nom:'Português', accroche:'O seu orçamento, claro e simples. Importe o seu extrato bancário, o Cap Budget classifica tudo e mostra para onde vai o seu dinheiro, mês a mês.', importer:'Importar o meu extrato', demo:'Experimentar a demo', a1t:'📂 Importação em 10 segundos', a1:'Um CSV, um PDF ou uma captura do seu banco, e está classificado.', a2t:'📊 Gráficos claros', a2:'Diagramas e barras, rubrica a rubrica.', a3t:'🔒 Nada sai daqui', a3:'Os seus dados ficam no seu dispositivo.', a4t:'✨ Categorias automáticas', a4:'Criadas a partir dos seus extratos.', camemberts:'Diagramas', barres:'Barras', importerCsv:'Importar um extrato', categories:'Categorias', effacer:'Apagar tudo', kRev:'Receitas do mês', kDep:'Despesas do mês', kRes:'Resultado', kNb:'Operações', gDep:'Despesas por rubrica', gRev:'Receitas por origem', gAnnee:'Ano: receitas e despesas', titreCat:'As suas categorias', aideCat:'Criadas automaticamente a partir dos seus extratos. Mude o nome, marque várias para as juntar, ou adicione as suas.', ajouter:'Adicionar', fusionner:'Juntar seleção', fermer:'Fechar', nouvelle:'Nova categoria', depense:'Despesa', revenu:'Receita', revenus:'Receitas', depenses:'Despesas', confirmer:'Apagar todos os dados?', importees:'operações importadas', nomFusion:'Nome da categoria junta:', choisir2:'Marque pelo menos duas categorias do mesmo tipo.'}
+};
+// Textes du choix Professionnel / Particulier, des budgets et de l'épargne
+const T2 = {
+ fr:{choixTitre:'Pour qui est ce budget ?', choixAide:'Vous pourrez changer à tout moment en haut de l’écran.', pro:'Professionnel', proD:'Entreprise, commerce, artisan, indépendant', perso:'Particulier', persoD:'Budget du foyer, dépenses et épargne', budgets:'Budgets et épargne', suivi:'Budgets du mois', aideBudg:'Fixez un plafond mensuel pour chaque catégorie de dépense (laissez vide pour aucun).', epargne:'Objectifs d’épargne', objNom:'Objectif (ex. vacances)', objCible:'Montant visé', dejaEp:'Déjà épargné', reste:'Reste', depasse:'Dépassé de', aucunBudget:'Aucun plafond fixé : ouvrez « Budgets et épargne ».', aucunObj:'Aucun objectif pour l’instant.', supprimer:'Supprimer', lecture:'Lecture du fichier', lectureAide:'La lecture d’un PDF ou d’une photo peut prendre jusqu’à une minute. Rien n’est envoyé sur internet.', verifTitre:'Vérifiez les opérations lues', verifAide:'Lecture automatique : corrigez si besoin une date, un libellé ou un montant (négatif pour une dépense), et décochez les lignes en trop.', importerSel:'Importer la sélection', annuler:'Annuler', colDate:'Date', colLib:'Libellé', colMontant:'Montant', aucuneLue:'Aucune opération n’a pu être lue dans ce fichier. Essayez une capture plus nette ou l’export CSV de la banque.', errLecture:'Impossible de lire ce fichier. Une connexion internet est nécessaire pour lire les PDF et les photos.', pasCsv:'Ce fichier n’est pas un CSV. Sur le site de votre banque, exportez l’historique du compte au format CSV (parfois appelé « Excel » ou « tableur »), pas en PDF ni en photo.', rien:'Aucune nouvelle opération trouvée. Vérifiez qu’il s’agit bien de l’export CSV de votre compte.'},
+ en:{choixTitre:'Who is this budget for?', choixAide:'You can switch at any time at the top of the screen.', pro:'Business', proD:'Company, shop, tradesperson, freelancer', perso:'Personal', persoD:'Household budget, spending and savings', budgets:'Budgets & savings', suivi:'This month’s budgets', aideBudg:'Set a monthly limit for each spending category (leave empty for none).', epargne:'Savings goals', objNom:'Goal (e.g. holidays)', objCible:'Target amount', dejaEp:'Already saved', reste:'Left', depasse:'Over by', aucunBudget:'No limits set: open “Budgets & savings”.', aucunObj:'No goals yet.', supprimer:'Delete', lecture:'Reading file', lectureAide:'Reading a PDF or a photo can take up to a minute. Nothing is sent over the internet.', verifTitre:'Check the transactions read', verifAide:'Automatic reading: correct a date, label or amount if needed (negative for an expense), and untick extra lines.', importerSel:'Import selection', annuler:'Cancel', colDate:'Date', colLib:'Label', colMontant:'Amount', aucuneLue:'No transactions could be read from this file. Try a sharper screenshot or your bank’s CSV export.', errLecture:'Unable to read this file. An internet connection is needed to read PDFs and photos.', pasCsv:'This file is not a CSV. On your bank’s website, export the account history as CSV (sometimes called “Excel” or “spreadsheet”), not as a PDF or a photo.', rien:'No new transactions found. Check that this is your account’s CSV export.'},
+ es:{choixTitre:'¿Para quién es este presupuesto?', choixAide:'Podrás cambiarlo en cualquier momento arriba de la pantalla.', pro:'Profesional', proD:'Empresa, comercio, artesano, autónomo', perso:'Particular', persoD:'Presupuesto del hogar, gastos y ahorro', budgets:'Presupuestos y ahorro', suivi:'Presupuestos del mes', aideBudg:'Fija un límite mensual para cada categoría de gasto (vacío = sin límite).', epargne:'Objetivos de ahorro', objNom:'Objetivo (p. ej. vacaciones)', objCible:'Importe objetivo', dejaEp:'Ya ahorrado', reste:'Queda', depasse:'Superado en', aucunBudget:'Sin límites: abre «Presupuestos y ahorro».', aucunObj:'Aún no hay objetivos.', supprimer:'Eliminar', lecture:'Leyendo el archivo', lectureAide:'Leer un PDF o una foto puede tardar hasta un minuto. No se envía nada por internet.', verifTitre:'Revisa las operaciones leídas', verifAide:'Lectura automática: corrige si hace falta una fecha, un concepto o un importe (negativo para un gasto) y desmarca las líneas sobrantes.', importerSel:'Importar la selección', annuler:'Cancelar', colDate:'Fecha', colLib:'Concepto', colMontant:'Importe', aucuneLue:'No se ha podido leer ninguna operación. Prueba con una captura más nítida o la exportación CSV del banco.', errLecture:'No se puede leer este archivo. Se necesita conexión a internet para leer PDF y fotos.', pasCsv:'Este archivo no es un CSV. En la web de tu banco, exporta los movimientos en formato CSV (a veces llamado «Excel»), no en PDF ni en foto.', rien:'No se han encontrado operaciones nuevas. Comprueba que es la exportación CSV de tu cuenta.'},
+ it:{choixTitre:'Per chi è questo budget?', choixAide:'Potrai cambiare in qualsiasi momento in alto sullo schermo.', pro:'Professionale', proD:'Impresa, negozio, artigiano, libero professionista', perso:'Privato', persoD:'Budget familiare, spese e risparmio', budgets:'Budget e risparmio', suivi:'Budget del mese', aideBudg:'Fissa un tetto mensile per ogni categoria di spesa (vuoto = nessuno).', epargne:'Obiettivi di risparmio', objNom:'Obiettivo (es. vacanze)', objCible:'Importo obiettivo', dejaEp:'Già risparmiato', reste:'Restano', depasse:'Superato di', aucunBudget:'Nessun tetto: apri «Budget e risparmio».', aucunObj:'Nessun obiettivo per ora.', supprimer:'Elimina', lecture:'Lettura del file', lectureAide:'La lettura di un PDF o di una foto può richiedere fino a un minuto. Niente viene inviato su internet.', verifTitre:'Controlla le operazioni lette', verifAide:'Lettura automatica: correggi se serve una data, una descrizione o un importo (negativo per una spesa) e deseleziona le righe in più.', importerSel:'Importa la selezione', annuler:'Annulla', colDate:'Data', colLib:'Descrizione', colMontant:'Importo', aucuneLue:'Nessuna operazione letta in questo file. Prova uno screenshot più nitido o l’esportazione CSV della banca.', errLecture:'Impossibile leggere questo file. Serve una connessione internet per leggere PDF e foto.', pasCsv:'Questo file non è un CSV. Sul sito della tua banca, esporta i movimenti in formato CSV (a volte chiamato «Excel»), non in PDF né in foto.', rien:'Nessuna nuova operazione trovata. Verifica che sia l’esportazione CSV del tuo conto.'},
+ de:{choixTitre:'Für wen ist dieses Budget?', choixAide:'Sie können es jederzeit oben auf dem Bildschirm ändern.', pro:'Geschäftlich', proD:'Unternehmen, Geschäft, Handwerk, Selbstständige', perso:'Privat', persoD:'Haushaltsbudget, Ausgaben und Sparen', budgets:'Budgets und Sparen', suivi:'Budgets des Monats', aideBudg:'Legen Sie ein Monatslimit pro Ausgabenkategorie fest (leer = keines).', epargne:'Sparziele', objNom:'Ziel (z. B. Urlaub)', objCible:'Zielbetrag', dejaEp:'Bereits gespart', reste:'Übrig', depasse:'Überschritten um', aucunBudget:'Keine Limits: öffnen Sie „Budgets und Sparen“.', aucunObj:'Noch keine Ziele.', supprimer:'Löschen', lecture:'Datei wird gelesen', lectureAide:'Das Lesen eines PDFs oder Fotos kann bis zu einer Minute dauern. Nichts wird ins Internet gesendet.', verifTitre:'Gelesene Buchungen prüfen', verifAide:'Automatisch gelesen: Korrigieren Sie bei Bedarf Datum, Text oder Betrag (negativ für eine Ausgabe) und entfernen Sie überflüssige Zeilen.', importerSel:'Auswahl importieren', annuler:'Abbrechen', colDate:'Datum', colLib:'Buchungstext', colMontant:'Betrag', aucuneLue:'In dieser Datei konnte keine Buchung gelesen werden. Versuchen Sie einen schärferen Screenshot oder den CSV-Export der Bank.', errLecture:'Diese Datei kann nicht gelesen werden. Zum Lesen von PDFs und Fotos ist eine Internetverbindung nötig.', pasCsv:'Diese Datei ist keine CSV-Datei. Exportieren Sie die Umsätze auf der Website Ihrer Bank als CSV (manchmal „Excel“ genannt), nicht als PDF oder Foto.', rien:'Keine neuen Buchungen gefunden. Prüfen Sie, ob es der CSV-Export Ihres Kontos ist.'},
+ pt:{choixTitre:'Para quem é este orçamento?', choixAide:'Pode mudar a qualquer momento no topo do ecrã.', pro:'Profissional', proD:'Empresa, comércio, artesão, independente', perso:'Particular', persoD:'Orçamento familiar, despesas e poupança', budgets:'Orçamentos e poupança', suivi:'Orçamentos do mês', aideBudg:'Defina um limite mensal para cada categoria de despesa (vazio = nenhum).', epargne:'Objetivos de poupança', objNom:'Objetivo (ex. férias)', objCible:'Montante alvo', dejaEp:'Já poupado', reste:'Restam', depasse:'Excedido em', aucunBudget:'Sem limites: abra «Orçamentos e poupança».', aucunObj:'Ainda sem objetivos.', supprimer:'Apagar', lecture:'A ler o ficheiro', lectureAide:'Ler um PDF ou uma foto pode demorar até um minuto. Nada é enviado pela internet.', verifTitre:'Verifique as operações lidas', verifAide:'Leitura automática: corrija se necessário uma data, descrição ou montante (negativo para uma despesa) e desmarque as linhas a mais.', importerSel:'Importar a seleção', annuler:'Cancelar', colDate:'Data', colLib:'Descrição', colMontant:'Montante', aucuneLue:'Não foi possível ler nenhuma operação. Experimente uma captura mais nítida ou a exportação CSV do banco.', errLecture:'Não é possível ler este ficheiro. É necessária ligação à internet para ler PDF e fotos.', pasCsv:'Este ficheiro não é um CSV. No site do seu banco, exporte os movimentos em formato CSV (por vezes chamado «Excel»), não em PDF nem em foto.', rien:'Nenhuma nova operação encontrada. Verifique se é a exportação CSV da sua conta.'}
+};
+Object.keys(T2).forEach(l => Object.assign(T[l], T2[l]));
+const LOCALE = {fr:'fr-FR', en:'en-GB', es:'es-ES', it:'it-IT', de:'de-DE', pt:'pt-PT'};
+
+// ---------- État ----------
+let etat;
+try { etat = JSON.parse(localStorage.getItem('capbudget') || 'null'); } catch (e) { etat = null; }
+etat = etat || {langue:null, profil:null, categories:[], operations:[]};
+etat.plafonds = etat.plafonds || {}; etat.objectifs = etat.objectifs || [];
+if (!etat.langue) { const l = (navigator.language || 'fr').slice(0, 2); etat.langue = T[l] ? l : 'en'; }
+let vue = 'camembert', graphes = {}, modeEnAttente = null;
+const t = k => T[etat.langue][k];
+const sauver = () => { try { localStorage.setItem('capbudget', JSON.stringify(etat)); } catch (e) {} };
+const eur = v => v.toLocaleString(LOCALE[etat.langue], {style:'currency', currency:'EUR'});
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const PALETTE = ['#1e3a8a','#06b6d4','#fb7185','#34d399','#fbbf24','#a78bfa','#f97316','#14b8a6','#e11d48','#64748b','#0ea5e9','#84cc16','#c084fc'];
+
+// ---------- Messages (à la place de alert, confirm et prompt) ----------
+function message(txt) { return boite(txt, false); }
+function boite(txt, avecAnnuler, saisie) {
+  return new Promise(ok => {
+    const m = document.getElementById('mMessage'), zone = document.getElementById('zoneSaisie');
+    document.getElementById('txtMessage').textContent = txt;
+    zone.innerHTML = ''; let champ = null;
+    if (saisie !== undefined && saisie !== null) { champ = document.createElement('input'); champ.type = 'text'; champ.value = saisie; champ.style.width = '100%'; zone.appendChild(champ); }
+    const bOk = document.getElementById('bOk'), bAn = document.getElementById('bAnnuler');
+    bAn.textContent = t('annuler'); bAn.style.display = avecAnnuler ? '' : 'none';
+    const fin = v => { m.classList.remove('actif'); bOk.onclick = bAn.onclick = null; ok(v); };
+    bOk.onclick = () => fin(champ ? champ.value.trim() : true);
+    bAn.onclick = () => fin(champ ? null : false);
+    m.classList.add('actif'); (champ || bOk).focus();
+  });
+}
+
+// ---------- Langue ----------
+function setLangue(l) { etat.langue = l; sauver(); traduire(); if (document.getElementById('app').classList.contains('actif')) { remplirMois(); afficher(); } }
+function traduire() {
+  document.documentElement.lang = etat.langue;
+  document.querySelectorAll('[data-t]').forEach(e => e.textContent = t(e.dataset.t));
+  document.querySelectorAll('select.langue').forEach(s => { s.innerHTML = Object.keys(T).map(l => `<option value="${l}">${T[l].nom}</option>`).join(''); s.value = etat.langue; });
+  document.getElementById('nvNom').placeholder = t('nouvelle');
+  document.getElementById('nvType').innerHTML = `<option value="depense">${t('depense')}</option><option value="revenu">${t('revenu')}</option>`;
+  const sp = document.getElementById('selProfil');
+  sp.innerHTML = `<option value="pro">${t('pro')}</option><option value="perso">${t('perso')}</option>`; sp.value = etat.profil || 'pro';
+  document.getElementById('objNom').placeholder = t('objNom'); document.getElementById('objCible').placeholder = t('objCible');
+  document.body.classList.toggle('mode-perso', etat.profil === 'perso');
+}
+
+// ---------- Navigation et profil ----------
+function lancer(mode) {
+  if (!etat.profil) { modeEnAttente = mode; document.getElementById('mProfil').classList.add('actif'); return; }
+  if (mode === 'demo' && etat.operations.length === 0) chargerDemo();
+  document.getElementById('accueil').classList.remove('actif'); document.getElementById('app').classList.add('actif');
+  if (mode === 'import' && etat.operations.length === 0) document.getElementById('fichier').click();
+  remplirMois(); afficher();
+}
+function choisirProfil(p) { etat.profil = p; sauver(); document.getElementById('mProfil').classList.remove('actif'); traduire(); lancer(modeEnAttente || 'demo'); }
+function setProfil(p) { etat.profil = p; sauver(); traduire(); afficher(); }
+async function toutEffacer() { if (await boite(t('confirmer'), true)) { try { localStorage.removeItem('capbudget'); } catch (e) {} location.reload(); } }
+
+// ---------- Import : CSV, PDF et photos (plusieurs fichiers à la fois) ----------
+const estPdf = f => /\.pdf$/i.test(f.name) || f.type === 'application/pdf';
+const estImage = f => /\.(jpe?g|png|webp|heic|bmp|gif)$/i.test(f.name) || /^image\//.test(f.type);
+async function importerFichiers(liste) {
+  const fichiers = [...(liste || [])];
+  document.getElementById('fichier').value = '';
+  if (!fichiers.length) return;
+  // 1. Les CSV : lecture directe.
+  for (const f of fichiers.filter(f => !estPdf(f) && !estImage(f))) importerTexte(await lireTexte(f));
+  // 2. Les PDF et les photos : lecture du texte, puis vérification par l'utilisateur.
+  const autres = fichiers.filter(f => estPdf(f) || estImage(f));
+  if (!autres.length) return;
+  let ops = [];
+  try {
+    for (let k = 0; k < autres.length; k++) {
+      attente(`${t('lecture')} ${k + 1} / ${autres.length}`);
+      const lignes = estPdf(autres[k]) ? await lignesPdf(autres[k]) : await lignesImage(autres[k]);
+      ops = ops.concat(analyserLignes(lignes));
+    }
+  } catch (e) { attente(''); message(t('errLecture')); return; }
+  attente('');
+  // Les captures qui se chevauchent montrent deux fois la même opération : on n'en garde qu'une.
+  const vus = new Set();
+  ops = ops.filter(o => { const k = o.date + '|' + o.libelle + '|' + o.montant; if (vus.has(k)) return false; vus.add(k); return true; });
+  if (!ops.length) { message(t('aucuneLue')); return; }
+  ouvrirVerif(ops);
+}
+function lireTexte(f) {
+  return new Promise(ok => {
+    const r = new FileReader();
+    r.onload = e => {
+      // Lit le fichier en UTF-8, ou en Windows-1252 (accents des banques françaises) si besoin.
+      const octets = new Uint8Array(e.target.result);
+      try { ok(new TextDecoder('utf-8', {fatal: true}).decode(octets)); } catch (err) { ok(new TextDecoder('windows-1252').decode(octets)); }
+    };
+    r.readAsArrayBuffer(f);
+  });
+}
+function attente(msg) { document.getElementById('txtAttente').textContent = msg || ''; document.getElementById('mAttente').classList.toggle('actif', !!msg); }
+function chargerScript(src) {
+  return new Promise((ok, ko) => {
+    if (document.querySelector(`script[src="${src}"]`)) return ok();
+    const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = ko; document.head.appendChild(s);
+  });
+}
+const LIBS = {
+  pdf: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+  pdfWorker: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
+  ocr: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js'
+};
+// PDF : récupère le texte de chaque page, ligne par ligne, avec la position horizontale de chaque mot.
+async function lignesPdf(f) {
+  await chargerScript(LIBS.pdf);
+  pdfjsLib.GlobalWorkerOptions.workerSrc = LIBS.pdfWorker;
+  const doc = await pdfjsLib.getDocument({data: await f.arrayBuffer()}).promise;
+  const lignes = [];
+  for (let p = 1; p <= doc.numPages; p++) {
+    const contenu = await (await doc.getPage(p)).getTextContent();
+    const parY = [];
+    contenu.items.forEach(it => {
+      if (!it.str.trim()) return;
+      const x = it.transform[4], y = it.transform[5];
+      let l = parY.find(l => Math.abs(l.y - y) < 3);
+      if (!l) { l = {y, items: []}; parY.push(l); }
+      l.items.push({str: it.str.trim(), x, w: it.width || 0});
+    });
+    parY.sort((a, b) => b.y - a.y).forEach(l => { l.items.sort((a, b) => a.x - b.x); lignes.push({texte: l.items.map(i => i.str).join(' '), items: l.items}); });
+  }
+  return lignes;
+}
+// Photo ou capture d'écran : reconnaissance du texte, directement dans le navigateur (l'image n'est envoyée nulle part).
+async function lignesImage(f) {
+  await chargerScript(LIBS.ocr);
+  const w = await Tesseract.createWorker('fra');
+  const { data } = await w.recognize(f);
+  await w.terminate();
+  // Couleur de chaque mot : dans beaucoup d'applis bancaires, les crédits sont écrits en vert.
+  let ctx = null;
+  try {
+    const img = await createImageBitmap(f), c = document.createElement('canvas');
+    c.width = img.width; c.height = img.height; ctx = c.getContext('2d', {willReadFrequently: true}); ctx.drawImage(img, 0, 0);
+  } catch (e) {}
+  const mots = (data.words || []).map(m => ({str: m.text, x0: m.bbox.x0, x1: m.bbox.x1, y0: m.bbox.y0, y1: m.bbox.y1, vert: ctx ? estVert(ctx, m.bbox) : null}));
+  return grouperMots(mots);
+}
+function estVert(ctx, b) {
+  const w = Math.max(1, b.x1 - b.x0), h = Math.max(1, b.y1 - b.y0);
+  const d = ctx.getImageData(b.x0, b.y0, w, h).data;
+  // On ne regarde que les pixels du texte (les plus foncés) : vert si le vert domine nettement le rouge.
+  let n = 0, r = 0, g = 0;
+  for (let i = 0; i < d.length; i += 4) { if (d[i] + d[i + 1] + d[i + 2] < 450) { r += d[i]; g += d[i + 1]; n++; } }
+  return n > 0 && (g - r) / n > 40;
+}
+// Regroupe les mots qui sont à la même hauteur sur l'image : le montant retrouve ainsi son libellé,
+// même quand la lecture automatique a lu l'écran colonne par colonne.
+function grouperMots(mots) {
+  mots = mots.filter(m => m.str && m.str.trim());
+  // Hauteur habituelle d'un mot : les icônes et les éléments plus grands ne doivent pas fusionner plusieurs lignes.
+  const hauteurs = mots.map(m => m.y1 - m.y0).sort((a, b) => a - b), hType = hauteurs[Math.floor(hauteurs.length / 2)] || 10;
+  const rangs = [];
+  mots.filter(m => m.y1 - m.y0 <= hType * 2.5).sort((a, b) => (a.y0 + a.y1) - (b.y0 + b.y1)).forEach(m => {
+    const yc = (m.y0 + m.y1) / 2;
+    let r = rangs.find(r => Math.abs(r.yc - yc) < hType * 0.6);
+    if (!r) { r = {yc, mots: []}; rangs.push(r); }
+    r.mots.push(m);
+  });
+  return rangs.sort((a, b) => a.yc - b.yc).map(r => {
+    r.mots.sort((a, b) => a.x0 - b.x0);
+    return {texte: r.mots.map(m => m.str).join(' '), items: r.mots.map(m => ({str: m.str, x: m.x0, w: m.x1 - m.x0, vert: m.vert})), image: true};
+  });
+}
+// Transforme des lignes de texte en opérations. Gère deux présentations :
+// - un relevé PDF : « 06/10/2026  LIBELLÉ  170,61 » (débit ou crédit selon la colonne) ;
+// - une capture de l'appli bancaire : « LIBELLÉ  -170,61 € », suite du libellé, puis « Lun. 05 oct. ».
+function analyserLignes(lignes) {
+  const sansAcc = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const reMontant = /([+\-−–]?)\s?(\d{1,3}(?:[ \u00a0\u202f.]\d{3})*,\d{2})(?!\d)/g;
+  const reDateNum = /\b(\d{1,2})[\/.](\d{1,2})(?:[\/.](\d{4}|\d{2}))?\b/g;
+  const reDateMois = /\b(\d{1,2})\s+(janv|jan|fevr|fev|feb|mars|mar|avr|apr|mai|may|juin|jun|juil|jul|aout|aug|sept|sep|oct|nov|dec)[a-z]*\.?(?:\s+(\d{4}))?/;
+  const MOIS = {janv:1, jan:1, fevr:2, fev:2, feb:2, mars:3, mar:3, avr:4, apr:4, mai:5, may:5, juin:6, jun:6, juil:7, jul:7, aout:8, aug:8, sept:9, sep:9, oct:10, nov:11, dec:12};
+  const auj = new Date();
+  const annee = (m, a) => a ? (a.length === 2 ? 2000 + +a : +a) : (m > auj.getMonth() + 1 ? auj.getFullYear() - 1 : auj.getFullYear());
+  const iso = (j, m, a) => (j >= 1 && j <= 31 && m >= 1 && m <= 12) ? `${a}-${String(m).padStart(2, '0')}-${String(j).padStart(2, '0')}` : null;
+  const valeur = s => parseFloat(s.replace(/[ \u00a0\u202f.]/g, '').replace(',', '.'));
+  // Retire le symbole €, les petits signes parasites (icônes, flèches) et les espaces en trop.
+  const nettoyer = s => s.replace(/^\s*\S{1,2}\s+(?=[A-Z]{3})/, '').replace(/\s+\d$/, '').replace(/€|EUR\b/gi, ' ').replace(/(^|\s)[^A-Za-z0-9À-ÿ\s]{1,3}(?=\s|$)/g, ' ').replace(/\s+/g, ' ').replace(/^[^A-Za-z0-9À-ÿ]+|[^A-Za-z0-9À-ÿ.)]+$/g, '').trim();
+  // Colonnes « Débit » et « Crédit » d'un relevé, si on les trouve.
+  const centre = i => i.x + (i.w || 0) / 2;
+  let xDeb = null, xCred = null;
+  const entete = lignes.find(l => /debit/.test(sansAcc(l.texte)) && /credit/.test(sansAcc(l.texte)) && l.items && l.items.length);
+  if (entete) entete.items.forEach(i => { const s = sansAcc(i.str); if (/debit/.test(s) && xDeb === null) xDeb = centre(i); if (/credit/.test(s) && xCred === null) xCred = centre(i); });
+  // Signe d'après la couleur du montant sur une photo (vert = crédit), quand le + ou le - n'a pas été lu.
+  const signeCouleur = (l, m) => {
+    if (!l.image || !l.items) return '';
+    const fin = m[2].slice(-3), item = l.items.find(i => i.str.includes(fin) && i.vert !== null && i.vert !== undefined);
+    return item ? (item.vert ? '+' : '-') : '';
+  };
+  const motsCredit = /(euro vir|vir(ement)? (recu|sepa recu|de )|remise|salaire|versement|avoir|rembours)/i;
+  const ops = [];
+  let bloc = null, precedent = '';
+  for (const l of lignes) {
+    const t0 = l.texte.replace(/\s+/g, ' ').replace(/\bO(?=\d)/g, '0').replace(/(\d)O\b/g, '$10').replace(/[—]/g, '-').trim();
+    if (!t0) continue;
+    const montants = [...t0.matchAll(reMontant)];
+    const datesNum = [...t0.matchAll(reDateNum)].map(d => iso(+d[1], +d[2], annee(+d[2], d[3]))).filter(Boolean);
+    const dm = sansAcc(t0).match(reDateMois);
+    const dateMois = dm ? iso(+dm[1], MOIS[dm[2]], annee(MOIS[dm[2]], dm[3])) : null;
+    if (montants.length && datesNum.length) {
+      // Ligne de relevé : date + libellé + montant.
+      let m = montants[montants.length - 1], signe = m[1];
+      if (!signe && xDeb !== null && xCred !== null && l.items) {
+        const items = l.items.filter(i => /\d,\d{2}/.test(i.str));
+        if (items.length) {
+          const ecart = i => Math.min(Math.abs(centre(i) - xDeb), Math.abs(centre(i) - xCred));
+          const proche = items.reduce((a, b) => ecart(a) <= ecart(b) ? a : b);
+          const mi = [...proche.str.matchAll(reMontant)].pop();
+          if (mi) m = mi;
+          signe = Math.abs(centre(proche) - xCred) < Math.abs(centre(proche) - xDeb) ? '+' : '-';
+        }
+      }
+      let lib = t0; montants.forEach(x => lib = lib.replace(x[0], ' ')); lib = nettoyer(lib.replace(reDateNum, ' '));
+      if (!signe) signe = signeCouleur(l, m) || (motsCredit.test(lib) ? '+' : '-');
+      ops.push({date: datesNum[0], libelle: lib, montant: (signe === '+' ? 1 : -1) * valeur(m[2])});
+      bloc = null;
+    } else if (montants.length && (/[+\-−–]/.test(montants[montants.length - 1][1]) || (signeCouleur(l, montants[montants.length - 1]) && nettoyer(t0.replace(montants[montants.length - 1][0], ' ')).replace(/[^A-Za-z]/g, '').length > 2))) {
+      // Capture de l'appli : libellé et montant (signé ou coloré), la date suit plus bas.
+      const m = montants[montants.length - 1];
+      const signe = /[+\-−–]/.test(m[1]) ? (m[1] === '+' ? '+' : '-') : signeCouleur(l, m);
+      let lib = nettoyer(t0.replace(m[0], ' '));
+      if (!lib) lib = precedent;
+      bloc = {date: null, libelle: lib, montant: (signe === '+' ? 1 : -1) * valeur(m[2])};
+      if (dateMois) { bloc.date = dateMois; ops.push(bloc); bloc = null; }
+    } else if (bloc && (dateMois || datesNum.length)) {
+      bloc.date = dateMois || datesNum[0]; ops.push(bloc); bloc = null;
+    } else if (bloc && !montants.length && /^[A-Z0-9 .,'&\-\/]+$/.test(nettoyer(t0)) && nettoyer(t0) && bloc.libelle.length < 60) {
+      bloc.libelle = nettoyer(bloc.libelle + ' ' + nettoyer(t0));
+    } else if (!montants.length) {
+      precedent = nettoyer(t0);
+    }
+  }
+  return ops.filter(o => o.date && o.libelle && o.montant);
+}
+let aVerifier = [];
+function ouvrirVerif(ops) {
+  aVerifier = ops;
+  document.getElementById('listeVerif').innerHTML = ops.map((o, i) => `<div class="ligne-verif">
+    <input type="checkbox" class="vCoche" data-i="${i}" checked aria-label="${t('importerSel')}">
+    <input type="date" value="${o.date}" aria-label="${t('colDate')}" onchange="aVerifier[${i}].date = this.value">
+    <input type="number" step="0.01" value="${o.montant}" aria-label="${t('colMontant')}" class="${o.montant >= 0 ? 'revenu' : 'depense'}" onchange="aVerifier[${i}].montant = parseFloat(this.value) || 0; this.className = aVerifier[${i}].montant >= 0 ? 'revenu' : 'depense'">
+    <span></span><input type="text" value="${esc(o.libelle)}" aria-label="${t('colLib')}" onchange="aVerifier[${i}].libelle = this.value"></div>`).join('');
+  document.getElementById('mVerif').classList.add('actif');
+}
+function validerVerif() {
+  const choisis = [...document.querySelectorAll('.vCoche')].filter(c => c.checked).map(c => aVerifier[+c.dataset.i]);
+  let n = 0;
+  choisis.forEach(o => {
+    if (!o.date || !o.montant) return;
+    if (etat.operations.some(x => x.date === o.date && x.libelle === o.libelle && x.montant === o.montant)) return;
+    etat.operations.push({date: o.date, libelle: o.libelle, montant: o.montant, cat: null}); n++;
+  });
+  document.getElementById('mVerif').classList.remove('actif');
+  classerTout(); sauver(); remplirMois(); afficher();
+  message(n ? n + ' ' + t('importees') : t('rien'));
+}
+function importerTexte(txt, silencieux) {
+  let lignes = txt.replace(/^\uFEFF/, '').split(/\r?\n/).filter(l => l.trim());
+  // Saute les lignes d'en-tête de la banque (nom du compte, solde...) jusqu'à la ligne des titres de colonnes.
+  const iEnt = lignes.findIndex(l => /date|fecha|datum|data/i.test(l) && /libell|label|descri|intitul|concepto|buchungstext|verwendung|causale|movimento|montant|amount|d[ée]bit/i.test(l));
+  if (iEnt > 0) lignes = lignes.slice(iEnt);
+  if (lignes.length < 2) { if (!silencieux) message(t('rien')); return; }
+  const sep = [';', ',', '\t'].sort((a, b) => lignes[0].split(b).length - lignes[0].split(a).length)[0];
+  // Découpe une ligne en respectant les guillemets ("1 234,56" ne doit pas être coupé).
+  const decoupe = l => { const res = []; let cur = '', q = false; for (const ch of l) { if (ch === '"') q = !q; else if (ch === sep && !q) { res.push(cur.trim()); cur = ''; } else cur += ch; } res.push(cur.trim()); return res; };
+  const entete = decoupe(lignes[0]).map(h => h.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+  const col = (...n) => entete.findIndex(h => n.some(x => h.includes(x)));
+  const iDate = col('date', 'fecha', 'datum', 'data'), iLib = col('libell', 'label', 'descri', 'intitul', 'concepto', 'buchungstext', 'verwendung', 'causale', 'movimento');
+  const iMont = col('montant', 'amount', 'importe', 'importo', 'betrag', 'valor'), iDeb = col('debit', 'cargo', 'uscite', 'soll'), iCred = col('credit', 'abono', 'entrate', 'haben');
+  const nombre = s => { s = (s || '0').replace(/[\s€+]/g, ''); if (/,\d{1,2}$/.test(s)) s = s.replace(/\./g, '').replace(',', '.'); else s = s.replace(/,/g, ''); return parseFloat(s) || 0; };
+  const date = s => { const m = s.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/); if (m) return `${m[3].length === 2 ? '20' + m[3] : m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`; const iso = s.match(/\d{4}-\d{2}-\d{2}/); return iso ? iso[0] : null; };
+  let n = 0;
+  lignes.slice(1).forEach(l => {
+    const c = decoupe(l), d = date(c[iDate] || ''); if (!d) return;
+    const montant = iMont >= 0 ? nombre(c[iMont]) : nombre(c[iCred]) - Math.abs(nombre(c[iDeb]));
+    const op = {date:d, libelle:c[iLib] || '', montant, cat:null};
+    if (etat.operations.some(o => o.date === op.date && o.libelle === op.libelle && o.montant === op.montant)) return;
+    etat.operations.push(op); n++;
+  });
+  classerTout(); sauver(); remplirMois(); afficher();
+  if (!silencieux) message(n ? n + ' ' + t('importees') : t('rien'));
+}
+
+// ---------- Création automatique des catégories ----------
+// Retire les préfixes bancaires et les numéros pour retrouver le bénéficiaire.
+const PREFIXES = /^(PRLV SEPA|PRLV INT ETS|PRLV|EURO VIR|VIR INST|VIR SEPA|VIR|CARTE|CB|ADEUDO|RECIBO|TRANSFERENCIA|BONIFICO|ADDEBITO|LASTSCHRIFT|ÜBERWEISUNG|GUTSCHRIFT|TRF|DD|SO|PAGAMENTO)\s+/i;
+function cleDe(libelle) {
+  let s = libelle.toUpperCase().replace(/\./g, '').replace(/\d+/g, ' ').replace(/[*\/]/g, ' ').replace(/\s+/g, ' ').trim();
+  for (let i = 0; i < 3; i++) s = s.replace(PREFIXES, '');
+  return s.split(' ').filter(m => m.length > 1).slice(0, 3).join(' ') || libelle.slice(0, 20);
+}
+const joli = s => s.toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase());
+function classer(op) {
+  const lib = op.libelle.toUpperCase(), type = op.montant >= 0 ? 'revenu' : 'depense';
+  let cat = etat.categories.find(c => c.type === type && c.mots.some(m => lib.includes(m.toUpperCase())));
+  if (!cat) { const cle = cleDe(op.libelle); cat = {nom:joli(cle), type, mots:[cle], auto:true}; etat.categories.push(cat); }
+  op.cat = cat.nom;
+}
+function classerTout() { etat.operations.forEach(classer); }
+
+// ---------- Affichage ----------
+function remplirMois() {
+  const mois = [...new Set(etat.operations.map(o => o.date.slice(0, 7)))].sort().reverse();
+  const sel = document.getElementById('selMois'), avant = sel.value;
+  sel.innerHTML = mois.map(m => `<option value="${m}">${new Date(m + '-01').toLocaleDateString(LOCALE[etat.langue], {month:'long', year:'numeric'})}</option>`).join('');
+  if (mois.includes(avant)) sel.value = avant;
+}
+function setVue(v) { vue = v; document.getElementById('bCam').classList.toggle('on', v === 'camembert'); document.getElementById('bBar').classList.toggle('on', v === 'barres'); afficher(); }
+function afficher() {
+  if (!document.getElementById('app').classList.contains('actif')) return;
+  const mois = document.getElementById('selMois').value, ops = etat.operations.filter(o => o.date.startsWith(mois));
+  const rev = ops.filter(o => o.montant > 0), dep = ops.filter(o => o.montant < 0);
+  const tRev = rev.reduce((s, o) => s + o.montant, 0), tDep = -dep.reduce((s, o) => s + o.montant, 0);
+  document.getElementById('kRev').textContent = eur(tRev); document.getElementById('kDep').textContent = eur(tDep);
+  const res = document.getElementById('kRes'); res.textContent = eur(tRev - tDep); res.className = 'valeur ' + (tRev >= tDep ? 'revenu' : 'depense');
+  document.getElementById('kNb').textContent = ops.length;
+  if (window.Chart) { dessiner('gDep', agreger(dep)); dessiner('gRev', agreger(rev)); dessinerAnnee((mois || '2026').slice(0, 4)); }
+  if (etat.profil === 'perso') afficherBudgets(dep);
+}
+function agreger(ops) { const m = {}; ops.forEach(o => m[o.cat] = (m[o.cat] || 0) + Math.abs(o.montant)); return Object.entries(m).sort((a, b) => b[1] - a[1]); }
+function dessiner(id, d) {
+  if (graphes[id]) graphes[id].destroy();
+  const total = d.reduce((s, x) => s + x[1], 0);
+  graphes[id] = new Chart(document.getElementById(id), {type: vue === 'camembert' ? 'doughnut' : 'bar',
+    data: {labels: d.map(x => x[0]), datasets: [{data: d.map(x => x[1]), backgroundColor: PALETTE}]},
+    options: {indexAxis: 'y', plugins: {legend: {display: vue === 'camembert', position: 'bottom'},
+      tooltip: {callbacks: {label: c => { const v = c.parsed.x ?? c.parsed; return ` ${eur(v)} (${Math.round(v / total * 100)} %)`; }}}}}});
+}
+function dessinerAnnee(annee) {
+  if (graphes.gAnnee) graphes.gAnnee.destroy();
+  const mois = Array.from({length: 12}, (_, i) => `${annee}-${String(i + 1).padStart(2, '0')}`);
+  const somme = (m, sg) => etat.operations.filter(o => o.date.startsWith(m) && Math.sign(o.montant) === sg).reduce((s, o) => s + Math.abs(o.montant), 0);
+  graphes.gAnnee = new Chart(document.getElementById('gAnnee'), {type: 'bar',
+    data: {labels: mois.map(m => new Date(m + '-01').toLocaleDateString(LOCALE[etat.langue], {month:'short'})),
+      datasets: [{label: t('revenus'), data: mois.map(m => somme(m, 1)), backgroundColor: '#34d399'}, {label: t('depenses'), data: mois.map(m => somme(m, -1)), backgroundColor: '#fb7185'}]}});
+}
+
+// ---------- Mode particulier : plafonds par catégorie et objectifs d'épargne ----------
+function afficherBudgets(dep) {
+  const depenses = Object.fromEntries(agreger(dep));
+  const cats = Object.keys(etat.plafonds).filter(c => etat.plafonds[c] > 0);
+  document.getElementById('listeSuivi').innerHTML = cats.length ? cats.map(c => {
+    const d = depenses[c] || 0, p = etat.plafonds[c], r = d / p;
+    const coul = r > 1 ? '#e11d48' : r > 0.8 ? '#f59e0b' : '#059669';
+    const bas = d <= p ? `${t('reste')} ${eur(p - d)}` : `${t('depasse')} ${eur(d - p)}`;
+    return `<div class="ligne-budget"><div class="haut"><b>${esc(c)}</b><span>${eur(d)} / ${eur(p)}</span></div><div class="barre"><div style="width:${Math.min(100, r * 100)}%;background:${coul}"></div></div><p class="petit">${bas}</p></div>`;
+  }).join('') : `<p class="petit">${t('aucunBudget')}</p>`;
+  document.getElementById('listeEpargne').innerHTML = etat.objectifs.length ? etat.objectifs.map(o => {
+    const r = o.cible > 0 ? Math.min(1, o.deja / o.cible) : 0;
+    return `<div class="ligne-budget"><div class="haut"><b>${esc(o.nom)}</b><span>${eur(o.deja)} / ${eur(o.cible)}</span></div><div class="barre"><div style="width:${r * 100}%;background:#1e3a8a"></div></div><p class="petit">${Math.round(r * 100)} %</p></div>`;
+  }).join('') : `<p class="petit">${t('aucunObj')}</p>`;
+}
+const nomsDepenses = () => [...new Set(etat.categories.filter(c => c.type === 'depense').map(c => c.nom))];
+function ouvrirBudgets() { rendreBudgets(); document.getElementById('mBudgets').classList.add('actif'); }
+function fermerBudgets() { document.getElementById('mBudgets').classList.remove('actif'); afficher(); }
+function rendreBudgets() {
+  document.getElementById('listePlafonds').innerHTML = nomsDepenses().map((c, i) => `<div class="ligne-budget" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>${esc(c)}</span><input type="number" min="0" step="10" placeholder="—" value="${etat.plafonds[c] || ''}" onchange="fixerPlafond(${i}, this.value)"></div>`).join('');
+  document.getElementById('listeObjectifs').innerHTML = etat.objectifs.map((o, i) => `<div class="ligne-budget" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><b>${esc(o.nom)} · ${eur(o.cible)}</b><span class="petit">${t('dejaEp')} <input type="number" min="0" step="10" value="${o.deja}" onchange="majObjectif(${i}, this.value)"></span><button class="btn btn-petit" style="background:#ffe4e6;color:#9f1239;margin:0" onclick="supprimerObjectif(${i})">${t('supprimer')}</button></div>`).join('');
+}
+function fixerPlafond(i, v) { const c = nomsDepenses()[i], n = parseFloat(v); if (n > 0) etat.plafonds[c] = n; else delete etat.plafonds[c]; sauver(); }
+function ajouterObjectif() {
+  const nom = document.getElementById('objNom').value.trim(), cible = parseFloat(document.getElementById('objCible').value);
+  if (!nom || !(cible > 0)) return;
+  etat.objectifs.push({nom, cible, deja: 0}); document.getElementById('objNom').value = ''; document.getElementById('objCible').value = '';
+  sauver(); rendreBudgets();
+}
+function majObjectif(i, v) { etat.objectifs[i].deja = parseFloat(v) || 0; sauver(); }
+function supprimerObjectif(i) { etat.objectifs.splice(i, 1); sauver(); rendreBudgets(); }
+
+// ---------- Gestion des catégories : renommer, fusionner, ajouter ----------
+function ouvrirReglages() { rendreCats(); document.getElementById('mReglages').classList.add('actif'); }
+function fermer() { document.getElementById('mReglages').classList.remove('actif'); afficher(); }
+function rendreCats() {
+  document.getElementById('listeCat').innerHTML = etat.categories.map((c, i) => `<div style="padding:8px 0;border-bottom:1px solid #e2e8f0">
+    <input type="checkbox" class="coche" value="${i}"> <input type="text" value="${esc(c.nom)}" class="${c.type}" style="font-weight:600;width:60%" onchange="renommer(${i}, this.value)">
+    <span class="tag">${t(c.type)}</span><br>${c.mots.map(m => `<span class="tag">${esc(m)}</span>`).join('')}</div>`).join('');
+}
+function renommer(i, nom) {
+  const ancien = etat.categories[i].nom; etat.categories[i].nom = nom;
+  etat.operations.forEach(o => { if (o.cat === ancien) o.cat = nom; });
+  if (etat.plafonds[ancien]) { etat.plafonds[nom] = etat.plafonds[ancien]; delete etat.plafonds[ancien]; }
+  sauver();
+}
+async function fusionner() {
+  const idx = [...document.querySelectorAll('.coche:checked')].map(c => +c.value), sel = idx.map(i => etat.categories[i]);
+  if (sel.length < 2 || sel.some(c => c.type !== sel[0].type)) { message(t('choisir2')); return; }
+  const nom = await boite(t('nomFusion'), true, sel[0].nom); if (!nom) return;
+  const plafond = sel.reduce((s, c) => s + (etat.plafonds[c.nom] || 0), 0);
+  sel.forEach(c => delete etat.plafonds[c.nom]); if (plafond > 0) etat.plafonds[nom] = plafond;
+  const fusion = {nom, type: sel[0].type, mots: sel.flatMap(c => c.mots)};
+  etat.categories = etat.categories.filter((_, i) => !idx.includes(i)); etat.categories.unshift(fusion);
+  classerTout(); sauver(); rendreCats();
+}
+function ajouterCat() {
+  const nom = document.getElementById('nvNom').value.trim(); if (!nom) return;
+  etat.categories.unshift({nom, type: document.getElementById('nvType').value, mots: [nom.toUpperCase()]});
+  document.getElementById('nvNom').value = ''; classerTout(); sauver(); rendreCats();
+}
+
+// ---------- Démos (professionnel et particulier) ----------
+function chargerDemo() {
+  if (etat.profil === 'perso') {
+    importerTexte(`Date;Libellé;Montant
+01/10/2026;VIR SALAIRE SARL MARTIN;2150,00
+03/10/2026;PRLV SEPA LOYER IMMO CENTRE;-720,00
+05/10/2026;CB CARREFOUR MARKET;-86,40
+08/10/2026;PRLV SEPA EDF;-74,00
+10/10/2026;CB LIDL;-52,30
+12/10/2026;PRLV SEPA ORANGE;-39,99
+15/10/2026;CB TOTAL ENERGIES;-68,00
+18/10/2026;CB CARREFOUR MARKET;-112,75
+20/10/2026;PRLV SEPA MAAF ASSURANCES;-58,20
+22/10/2026;CB CINEMA MEGARAMA;-46,00
+25/10/2026;VIR CAF;180,00
+28/10/2026;CB LIDL;-34,10
+01/09/2026;VIR SALAIRE SARL MARTIN;2150,00
+03/09/2026;PRLV SEPA LOYER IMMO CENTRE;-720,00
+14/09/2026;CB CARREFOUR MARKET;-174,30`, true);
+    if (!Object.keys(etat.plafonds).length) etat.plafonds = {'Carrefour Market':200, 'Lidl':120, 'Total Energies':80, 'Cinema Megarama':40};
+    if (!etat.objectifs.length) etat.objectifs = [{nom:'Vacances', cible:2000, deja:650}];
+    sauver(); return;
+  }
+  importerTexte(`Date;Libellé;Montant
+06/10/2026;VIR CLIENT MARTIN SARL;2139,18
+05/10/2026;PRLV SEPA SWISSLIFE PREVOYANCE;-170,61
+05/10/2026;COM CB 5110889014;-0,35
+05/10/2026;REMISE CB 5110889014;58,95
+07/10/2026;VIR CLIENT HOTEL DU PORT;2091,77
+09/10/2026;PRLV SEPA BPCE IARD;-650,75
+09/10/2026;ECH PRET;-1984,80
+12/10/2026;PRLV SEPA FOURNISSEUR GROSSISTE;-373,83
+12/10/2026;REMISE CB 5110889014;100,35
+16/10/2026;PRLV SEPA URSSAF DE LANGUEDOC RO;-651,00
+22/10/2026;VIR CLIENT MARTIN SARL;1928,46
+26/10/2026;PRLV SEPA GIE KLESIA COTIS;-127,61
+30/10/2026;CARTE PAIEMENTS CB;-720,16
+09/09/2026;ECH PRET;-1984,80
+16/09/2026;PRLV SEPA URSSAF DE LANGUEDOC RO;-651,00
+20/09/2026;REMISE CB 5110889014;640,00`, true);
+}
+
+traduire();
+
+// ---------- Version installable : copie hors ligne ----------
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
